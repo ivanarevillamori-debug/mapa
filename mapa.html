@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raíces del Perú · Mapa Interactivo</title>
+<style>
+  :root{
+    --noche: #1B2A41;
+    --oro: #D4A017;
+    --barro: #B5482C;
+    --verde: #5C7A5C;
+    --arena: #EFE6D8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--noche);
+    background-image:
+      radial-gradient(circle at 15% 15%, rgba(212,160,23,0.08), transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(181,72,44,0.10), transparent 45%);
+    color: var(--arena);
+    font-family:'Georgia','Iowan Old Style',serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+
+  .contenedor{
+    width:100%;
+    max-width: 920px;
+    background: linear-gradient(180deg,#22334C,#1B2A41);
+    border-radius:18px;
+    border:1px solid rgba(212,160,23,0.25);
+    box-shadow:0 20px 60px rgba(0,0,0,0.45);
+    overflow:hidden;
+  }
+
+  header{
+    padding:26px 32px 16px;
+    text-align:center;
+    border-bottom:1px solid rgba(212,160,23,0.2);
+  }
+  .eyebrow{
+    font-family:'Trebuchet MS',sans-serif;
+    letter-spacing:3px;
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--oro);
+    opacity:.85;
+  }
+  h1{ font-size:28px; margin-top:6px; }
+  .sub{
+    font-family:'Trebuchet MS',sans-serif;
+    font-size:13px;
+    color:#B7AD98;
+    margin-top:8px;
+  }
+
+  .franja{ height:6px; display:flex; }
+  .franja span{ flex:1; }
+  .franja .c{ background:var(--barro); }
+  .franja .s{ background:var(--oro); }
+  .franja .sel{ background:var(--verde); }
+
+  main{
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap:0;
+  }
+  @media (max-width:760px){
+    main{ grid-template-columns:1fr; }
+  }
+
+  .panel-mapa{
+    padding:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,0.12);
+  }
+
+  svg{ width:100%; max-width:340px; height:auto; }
+
+  .region-svg{
+    cursor:pointer;
+    transition: opacity .2s ease, filter .2s ease;
+    stroke: rgba(27,42,65,0.6);
+    stroke-width:2;
+  }
+  .region-svg:hover{ filter:brightness(1.15); }
+  .region-svg.apagada{ opacity:0.35; }
+  .region-svg.activa{ filter: brightness(1.25) drop-shadow(0 0 10px rgba(212,160,23,0.6)); }
+
+  .etiqueta-mapa{
+    font-family:'Trebuchet MS',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    fill: var(--noche);
+    text-anchor:middle;
+    pointer-events:none;
+    letter-spacing:0.5px;
+  }
+
+  .panel-info{
+    padding:28px 32px;
+    display:flex;
+    flex-direction:column;
+    min-height:380px;
+  }
+
+  #estado-inicial{
+    margin:auto;
+    text-align:center;
+    color:#B7AD98;
+    font-family:'Trebuchet MS',sans-serif;
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  #detalle-region{ display:none; }
+
+  .region-titulo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:6px;
+  }
+  .punto{
+    width:14px; height:14px; border-radius:50%;
+    display:inline-block;
+  }
+  .region-titulo h2{ font-size:22px; }
+  .region-desc{
+    font-family:'Trebuchet MS',sans-serif;
+    font-size:13px;
+    color:#D9CFBB;
+    line-height:1.5;
+    margin-bottom:18px;
+  }
+
+  .lista-culturas{
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    max-height:260px;
+    overflow-y:auto;
+    padding-right:4px;
+  }
+  .lista-culturas li button{
+    width:100%;
+    text-align:left;
+    font-family:'Trebuchet MS',sans-serif;
+    font-size:13.5px;
+    font-weight:600;
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid rgba(212,160,23,0.25);
+    background: rgba(255,255,255,0.03);
+    color:var(--arena);
+    cursor:pointer;
+    transition: all .15s ease;
+  }
+  .lista-culturas li button:hover{
+    border-color:var(--oro);
+    background: rgba(212,160,23,0.1);
+  }
+  .lista-culturas li button.abierta{
+    background: rgba(212,160,23,0.14);
+    border-color: var(--oro);
+  }
+  .clue{
+    display:none;
+    font-family:'Trebuchet MS',sans-serif;
+    font-size:12.5px;
+    color:#D9CFBB;
+    line-height:1.5;
+    padding:8px 12px 2px;
+  }
+  .clue.visible{ display:block; }
+
+  .lista-culturas::-webkit-scrollbar{ width:6px; }
+  .lista-culturas::-webkit-scrollbar-thumb{ background: rgba(212,160,23,0.35); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<div class="contenedor">
+  <header>
+    <div class="eyebrow">Raíces del Perú</div>
+    <h1>Mapa Interactivo de Culturas</h1>
+    <div class="sub">Toca una región del mapa para descubrir sus culturas</div>
+  </header>
+  <div class="franja"><span class="c"></span><span class="s"></span><span class="sel"></span></div>
+
+  <main>
+    <div class="panel-mapa">
+      <svg viewBox="0 0 300 420" xmlns="http://www.w3.org/2000/svg">
+        <!-- Costa: franja angosta al oeste -->
+        <path id="reg-costa" class="region-svg" data-region="costa"
+          d="M 60 20 
+             C 40 60, 35 110, 50 160 
+             C 55 200, 45 250, 60 300 
+             C 65 340, 55 380, 70 405
+             L 110 405
+             C 100 370, 105 330, 100 290
+             C 105 250, 110 200, 105 160
+             C 110 110, 115 60, 120 20 Z"
+          fill="var(--barro)" />
+
+        <!-- Sierra: franja central -->
+        <path id="reg-sierra" class="region-svg" data-region="sierra"
+          d="M 120 20
+             C 115 60, 110 110, 105 160
+             C 110 200, 105 250, 100 290
+             C 105 330, 100 370, 110 405
+             L 175 405
+             C 185 370, 180 330, 185 290
+             C 180 250, 185 200, 180 160
+             C 185 110, 190 60, 185 20 Z"
+          fill="var(--oro)" />
+
+        <!-- Selva: franja este, más ancha -->
+        <path id="reg-selva" class="region-svg" data-region="selva"
+          d="M 185 20
+             C 190 60, 185 110, 180 160
+             C 185 200, 180 250, 185 290
+             C 180 330, 185 370, 175 405
+             L 250 405
+             C 265 360, 260 300, 255 250
+             C 260 190, 250 130, 235 70
+             C 220 45, 200 25, 185 20 Z"
+          fill="var(--verde)" />
+
+        <text x="88" y="215" class="etiqueta-mapa">COSTA</text>
+        <text x="147" y="215" class="etiqueta-mapa">SIERRA</text>
+        <text x="215" y="215" class="etiqueta-mapa">SELVA</text>
+      </svg>
+    </div>
+
+    <div class="panel-info">
+      <div id="estado-inicial">
+        🗺️<br><br>
+        Selecciona <strong>Costa</strong>, <strong>Sierra</strong> o <strong>Selva</strong> en el mapa para ver las culturas de esa región.
+      </div>
+
+      <div id="detalle-region">
+        <div class="region-titulo">
+          <span class="punto" id="punto-color"></span>
+          <h2 id="region-nombre"></h2>
+        </div>
+        <div class="region-desc" id="region-desc"></div>
+        <ul class="lista-culturas" id="lista-culturas"></ul>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const datos = {
+  costa: {
+    color: 'var(--barro)',
+    nombre: 'Costa',
+    desc: 'El desierto costero peruano vio nacer algunas de las civilizaciones más antiguas de América, junto a valles fértiles y el océano Pacífico.',
+    culturas: [
+      {n:"Caral", p:"Es considerada la civilización más antigua de América, con pirámides construidas hace más de 5,000 años en el valle de Supe."},
+      {n:"Paracas", p:"Es famosa por sus finos textiles bordados y las momias que se conservaron gracias al clima seco del desierto sureño."},
+      {n:"Chimú", p:"Construyó Chan Chan, la ciudadela de barro más grande de la América precolombina, cerca de Trujillo."},
+      {n:"Sechín", p:"Dejó muros de piedra tallados con escenas de guerreros, en un sitio ceremonial de la región Áncash."},
+      {n:"Nazca", p:"Es célebre por las enormes líneas y figuras trazadas en el desierto, que solo se aprecian bien desde el aire."},
+      {n:"Lima", p:"Levantó centros ceremoniales de adobe como Maranga y Pachacamac en los valles cercanos a la actual capital."},
+      {n:"Cupisnique", p:"Fue una cultura temprana de la costa norte cuya cerámica influyó en otros pueblos costeños posteriores."},
+      {n:"Mochica o Moche", p:"Se distinguió por su cerámica realista, los famosos huaco-retrato, y por las pirámides del Sol y la Luna."},
+      {n:"Chincha", p:"Fue un pueblo de hábiles comerciantes y navegantes de la costa sur, con una economía basada en el intercambio marítimo."},
+      {n:"Chavín", p:"Construyó un templo en forma de U con el Lanzón Monolítico en su interior; se le considera una cultura matriz de los Andes."},
+      {n:"Lambayeque o Sicán", p:"Es conocida por el Señor de Sicán y por su fina orfebrería en oro, en la costa norte del Perú."},
+      {n:"Chancay", p:"Destacó por sus textiles con figuras estilizadas y sus características muñecas de tela, cerca de Lima."}
+    ]
+  },
+  sierra: {
+    color: 'var(--oro)',
+    nombre: 'Sierra',
+    desc: 'La cordillera de los Andes fue el escenario de grandes imperios y reinos, desde los primeros estados expansivos hasta el Tahuantinsuyo.',
+    culturas: [
+      {n:"Wari", p:"Formó el primer gran imperio expansivo de los Andes antes que los incas, con capital cerca de la actual Ayacucho."},
+      {n:"Tiahuanaco o Tiwanaku", p:"Construyó la famosa Puerta del Sol, en las cercanías del lago Titicaca."},
+      {n:"Chavín", p:"Su templo principal, con galerías subterráneas, se ubica en la sierra de Áncash: Chavín de Huántar."},
+      {n:"Recuay", p:"Se reconoce por su cerámica pintada en blanco, rojo y negro, con figuras de felinos, en la región Áncash."},
+      {n:"Huanca", p:"Fue un pueblo guerrero del valle del Mantaro que luego se alió con los españoles en contra de los incas."},
+      {n:"Chachapoyas", p:"Llamados 'los guerreros de las nubes', construyeron la imponente fortaleza de Kuélap en la sierra nororiental."},
+      {n:"Kañaris", p:"Es un pueblo de la sierra de Lambayeque, con una fuerte tradición agrícola y ganadera en zonas altas."},
+      {n:"Inca", p:"Formó el imperio más extenso de la América precolombina, con el Cusco como capital."},
+      {n:"Qolla", p:"Fue un reino aimara junto al lago Titicaca, célebre por sus torres funerarias o chullpas."},
+      {n:"Lupaca", p:"Fue un reino aimara del altiplano, especializado en la crianza de grandes rebaños de camélidos junto al Titicaca."}
+    ]
+  },
+  selva: {
+    color: 'var(--verde)',
+    nombre: 'Selva',
+    desc: 'La Amazonía peruana alberga una gran diversidad de pueblos indígenas, muchos de los cuales mantienen vivas sus tradiciones hasta hoy.',
+    culturas: [
+      {n:"Chachapoyas (Selva Alta)", p:"En la ceja de selva, este pueblo construyó sarcófagos y mausoleos en los acantilados rocosos."},
+      {n:"Aguaruna o Awajún", p:"Es un pueblo históricamente guerrero de la selva norte, asentado en la cuenca del río Marañón."},
+      {n:"Shipibo-Conibo", p:"Se distingue por su cerámica y textiles con diseños geométricos llamados 'kené', en la cuenca del río Ucayali."},
+      {n:"Asháninka", p:"Es uno de los pueblos indígenas más numerosos de la Amazonía peruana, asentado en la selva central."},
+      {n:"Bora", p:"Pueblo de la Amazonía norte reconocido por sus máscaras y su pintura corporal hecha con tinte de huito."},
+      {n:"Yagua", p:"Habita cerca de Iquitos y es reconocido por sus vestimentas tradicionales hechas de fibras vegetales."},
+      {n:"Matsés", p:"Vive cerca de la frontera con Brasil y fue tradicionalmente conocido por su habilidad como cazadores con cerbatana."},
+      {n:"Harakbut", p:"Es un pueblo de la selva sur del Perú, asentado en la región de Madre de Dios."},
+      {n:"Amarakaeri", p:"Es un subgrupo harakbut de Madre de Dios, cercano a la Reserva Comunal que lleva su mismo nombre."},
+      {n:"Kukama-Kukamiria", p:"Es un pueblo ribereño de la Amazonía baja, con una vida y tradiciones muy ligadas a los grandes ríos."}
+    ]
+  }
+};
+
+const regiones = document.querySelectorAll('.region-svg');
+const estadoInicial = document.getElementById('estado-inicial');
+const detalle = document.getElementById('detalle-region');
+const puntoColor = document.getElementById('punto-color');
+const regionNombre = document.getElementById('region-nombre');
+const regionDesc = document.getElementById('region-desc');
+const listaCulturas = document.getElementById('lista-culturas');
+
+regiones.forEach(reg=>{
+  reg.addEventListener('click', ()=> mostrarRegion(reg.dataset.region));
+});
+
+function mostrarRegion(key){
+  const d = datos[key];
+
+  regiones.forEach(r=>{
+    r.classList.remove('activa','apagada');
+    if(r.dataset.region === key) r.classList.add('activa');
+    else r.classList.add('apagada');
+  });
+
+  estadoInicial.style.display='none';
+  detalle.style.display='block';
+  puntoColor.style.background = d.color;
+  regionNombre.textContent = d.nombre;
+  regionDesc.textContent = d.desc;
+
+  listaCulturas.innerHTML='';
+  d.culturas.forEach((c,i)=>{
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.textContent = c.n;
+    const clue = document.createElement('div');
+    clue.className='clue';
+    clue.textContent = c.p;
+    btn.addEventListener('click', ()=>{
+      const yaAbierta = btn.classList.contains('abierta');
+      document.querySelectorAll('.lista-culturas button').forEach(b=>b.classList.remove('abierta'));
+      document.querySelectorAll('.lista-culturas .clue').forEach(c=>c.classList.remove('visible'));
+      if(!yaAbierta){
+        btn.classList.add('abierta');
+        clue.classList.add('visible');
+      }
+    });
+    li.appendChild(btn);
+    li.appendChild(clue);
+    listaCulturas.appendChild(li);
+  });
+}
+</script>
+
+</body>
+</html>
